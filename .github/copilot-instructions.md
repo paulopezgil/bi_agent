@@ -1,35 +1,49 @@
 # Implementation Instructions
 
-You are an expert AI Engineer. Your goal is to build the "Autonomous BI Analyst" following the docs in this folder.
+You are an expert AI Engineer. Build and evolve the Autonomous BI Analyst in its current full-stack shape.
 
 ## Current Project State (Important)
-- The repo is already containerized with:
-	- root `docker-compose.yml`
-	- `docker/agent/Dockerfile`
-	- `docker/mcp/Dockerfile`
-	- `docker/postgres/init.sql`
-- `pyproject.toml` exists with baseline dependencies.
-- `src/main.py` and `src/mcp_server/server.py` are currently placeholders.
-- Do not re-scaffold structure unless explicitly asked.
+- Orchestration: root `docker-compose.yml`.
+- Services and Dockerfiles:
+  - `backend/agent/Dockerfile`
+  - `backend/mcp/Dockerfile`
+  - `frontend/chatbot/Dockerfile`
+- Postgres init scripts:
+  - `backend/postgres/init/001_schema.sql`
+  - `backend/postgres/init/002_seed_data.sql`
+  - `backend/postgres/init/003_roles.sql`
+- Implemented APIs:
+  - Agent: `backend/agent/app/main.py` (`POST /chat`)
+  - MCP: `backend/mcp/app/main.py` (tool endpoints)
+- Current frontend:
+  - `frontend/chatbot/index.html`
+  - `frontend/chatbot/styles.css`
+  - `frontend/chatbot/app.js`
 
-## Phase 1: Environment
-- Initialize a Python 3.11+ project using `uv`.
-- Install `langgraph`, `mcp`, `langchain-openai` (or anthropic), and `psycopg2-binary`.
-- Ensure `uv.lock` is generated and committed.
+## Phase 1: Stabilize Runtime
+- Ensure `docker compose up -d --build` brings all 4 services up cleanly.
+- Keep service URLs/ports consistent:
+  - frontend: `3000`
+  - agent: `8000`
+  - mcp: `8001`
+  - postgres: `5432`
 
-## Phase 2: MCP Server
-- Build the server in `src/mcp_server/server.py`.
-- Ensure the `execute_readonly_query` tool handles Postgres exceptions gracefully.
-- Enforce read-only query behavior with explicit statement validation and/or transaction safety.
+## Phase 2: Agent Quality
+- Improve SQL generation beyond rule-based mapping.
+- Keep self-correction loop with max 3 retries.
+- Preserve clear response payloads (`answer`, `sql`, `retries`, `rows`, `error`).
 
-## Phase 3: LangGraph
-- Implement the graph in `src/agent/graph.py`.
-- Add a "self-correction" loop: if the SQL fails, the agent must use the error message to fix the query.
-- Keep `AgentState` immutable in all node returns.
+## Phase 3: MCP Hardening
+- Preserve read-only validation and transaction safety.
+- Expand table metadata and error normalization behavior.
+- Add tests for blocked write SQL and DB error scenarios.
 
-## Phase 4: Main Entry
-- Create `src/main.py` to initialize the MCP client, connect it to the LangGraph agent, and start a REPL chat interface.
+## Phase 4: Frontend UX
+- Keep a simple chatbot UI with clear query/result visibility.
+- Surface generated SQL and retry count for transparency.
+- Ensure responsive behavior on mobile and desktop.
 
-## Phase 5: Quality Gates
-- Add tests under `tests/` for MCP tools and retry loop behavior.
-- Add lint/type/test commands for local and CI execution.
+## Phase 5: Engineering Quality
+- Add lint/type/test commands and CI workflow.
+- Add integration tests for `agent <-> mcp <-> postgres`.
+- Document deployment and environment setup in `README.md`.

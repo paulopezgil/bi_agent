@@ -1,24 +1,30 @@
 # LangGraph Orchestration Context
 
-## State Definition
-The `AgentState` is a `TypedDict` containing:
-- `messages`: Annotated[list, add_messages] (Chat history)
-- `schema_context`: String containing relevant DB schema.
-- `retry_count`: Integer to track SQL fix attempts (Max 3).
-- `pending_query`: The raw SQL string currently being tested.
+## Current Implementation Location
+- `backend/agent/app/graph.py`
 
-Implementation note:
-- Treat state as immutable in node handlers; always return a new state object.
+## State Definition (Current)
+`AgentState` contains:
+- `question`: user natural language request
+- `sql`: SQL currently being tested
+- `retries`: retry counter (max 3)
+- `error`: latest execution error
+- `rows`: query results
+- `answer`: final user-facing response
 
-## The Graph Flow
-1. **Node: `planner`**: Analyzes user intent and decides if DB access is needed.
-2. **Node: `get_schema`**: Calls MCP tool to fetch table/column definitions.
-3. **Node: `sql_generator`**: Writes the SQL query based on schema.
-4. **Node: `execute_query`**: Calls the MCP `execute_readonly_query` tool.
-5. **Node: `error_handler`**: If `execute_query` returns a Database Error, this node increments `retry_count` and sends the error back to `sql_generator`.
-6. **Edge: `should_continue`**: Conditional mapping to decide if the loop ends or retries.
+## Current Graph Flow
+1. `planner`: generates SQL from question.
+2. `execute_query`: calls MCP `/tools/execute_readonly_query`.
+3. `error_handler`: increments retries on failure.
+4. `format_answer`: formats final message.
+5. conditional edge `should_retry`: loops while `error` exists and retries < 3.
 
 ## Completion Criteria
-- Retry loop stops at `retry_count >= 3` with a user-facing failure explanation.
-- On SQL error, the next `sql_generator` prompt includes the exact DB error string.
-- Successful execution appends tool results to `messages` and resets `pending_query`.
+- Retry loop must stop at 3 attempts.
+- Error text must be preserved for debugging and user feedback.
+- Success path returns `rows`, `sql`, and `answer`.
+
+## Next Improvements
+1. Introduce schema-introspection step using MCP list/describe tools.
+2. Use LLM prompt templates for SQL generation and error correction.
+3. Add deterministic tests for retry and max-retry termination.

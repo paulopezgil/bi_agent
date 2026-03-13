@@ -1,30 +1,28 @@
-# MCP Server Specification (PostgreSQL)
+# MCP Service Specification (Current HTTP Shim)
 
-## Protocol
-- Use the `mcp` Python SDK to create a Standard Input/Output server.
-- The server must run in a separate process or container from the LangGraph agent.
-- Current container target: `docker/mcp/Dockerfile` running `python -m src.mcp_server.server`.
+## Current Implementation Location
+- `backend/mcp/app/main.py`
 
-## Tools to Implement
-1. **`list_tables`**: 
-   - Input: None
-   - Output: List of table names in the 'public' schema.
-2. **`describe_table`**:
-   - Input: `table_name` (str)
-   - Output: Column names, types, and foreign key relationships.
-3. **`execute_readonly_query`**:
-   - Input: `query` (str)
-   - Logic: Must wrap the execution in a transaction that is immediately rolled back or use a Read-Only user role to prevent `INSERT/UPDATE/DELETE`.
-   - Output: JSON formatted rows or clear error messages.
+## Service Contract
+- Health: `GET /health`
+- Tools:
+  - `POST /tools/list_tables`
+  - `POST /tools/describe_table`
+  - `POST /tools/execute_readonly_query`
 
-## Error Handling Requirements
-- Catch `psycopg2.Error` subclasses and return structured error text without crashing the server process.
-- Reject non-read-only statements (`INSERT`, `UPDATE`, `DELETE`, `ALTER`, `DROP`, etc.) before execution.
-- Include database error code and message in tool output when available.
-- Always close cursor/connection resources safely.
+## Behavior Requirements
+1. Reject non-read-only SQL (`INSERT`, `UPDATE`, `DELETE`, DDL, etc.).
+2. Reject multiple statements in one request.
+3. Execute under read-only transaction semantics.
+4. Return structured payloads (`ok`, `error`, `code`, `rows`, etc.).
 
-## Implementation Checklist
-1. Add DB connection helper using env vars (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`).
-2. Implement each tool with typed inputs/outputs.
-3. Normalize output to JSON-serializable dictionaries/lists.
-4. Add unit tests for success, syntax error, permission error, and blocked write-query behavior.
+## Database Connectivity
+Uses env vars:
+- `PGHOST`
+- `PGPORT`
+- `PGDATABASE`
+- `PGUSER`
+- `PGPASSWORD`
+
+## Next Step
+Migrate this HTTP shim to official MCP SDK transport while preserving the same tool behavior and safety guarantees.
