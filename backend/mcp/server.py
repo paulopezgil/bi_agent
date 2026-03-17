@@ -1,72 +1,21 @@
 from __future__ import annotations
 
-import os
-import re
-from contextlib import contextmanager
 from typing import Any
 
 import psycopg2
-from fastapi import FastAPI
-from pydantic import BaseModel
+from mcp.server.fastmcp import FastMCP
 from psycopg2.extras import RealDictCursor
 
-app = FastAPI(title="MCP SQL Tools", version="0.1.0")
+from backend.core.logger import get_logger
+from backend.postgres.connection import get_connection
 
-FORBIDDEN_SQL_RE = re.compile(
-    r"\b(insert|update|delete|alter|drop|truncate|create|grant|revoke|comment|copy|call|do)\b",
-    re.IGNORECASE,
-)
-ALLOWED_PREFIX_RE = re.compile(r"^\s*(select|with|show|explain)\b", re.IGNORECASE)
+logger = get_logger(__name__)
+mcp = FastMCP("Postgres-Assistant")
 
 
-class TableRequest(BaseModel):
-    table_name: str
-
-
-class QueryRequest(BaseModel):
-    query: str
-
-
-def db_config() -> dict[str, Any]:
-    return {
-        "host": os.getenv("PGHOST", "postgres"),
-        "port": int(os.getenv("PGPORT", "5432")),
-        "dbname": os.getenv("PGDATABASE", "bi_analytics"),
-        "user": os.getenv("PGUSER", "bi_readonly"),
-        "password": os.getenv("PGPASSWORD", "bi_readonly_pass"),
-        "connect_timeout": 5,
-    }
-
-
-@contextmanager
-def get_connection() -> Any:
-    conn = psycopg2.connect(**db_config())
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-def validate_read_only_query(query: str) -> str | None:
-    candidate = query.strip().rstrip(";")
-    if not candidate:
-        return "Query cannot be empty."
-    if ";" in candidate:
-        return "Multiple SQL statements are not allowed."
-    if FORBIDDEN_SQL_RE.search(candidate):
-        return "Only read-only SQL statements are allowed."
-    if not ALLOWED_PREFIX_RE.match(candidate):
-        return "Only SELECT/WITH/SHOW/EXPLAIN statements are allowed."
-    return None
-
-
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "service": "mcp"}
-
-
-@app.post("/tools/list_tables")
+@mcp.tool()
 def list_tables() -> dict[str, Any]:
+    """Return all tables in the public schema."""
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -78,14 +27,16 @@ def list_tables() -> dict[str, Any]:
                     ORDER BY table_name
                     """
                 )
-                rows = [r[0] for r in cur.fetchall()]
-        return {"ok": True, "tables": rows}
+                tables = [row[0] for row in cur.fetchall()]
+        return {"ok": True, "tables": tables}
     except psycopg2.Error as exc:
+        logger.exception("list_tables failed")
         return {"ok": False, "error": str(exc), "code": exc.pgcode}
 
 
-@app.post("/tools/describe_table")
-def describe_table(payload: TableRequest) -> dict[str, Any]:
+@mcp.tool()
+def describe_table(table_name: str) -> dict[str, Any]:
+    """Describe a table's columns and foreign keys."""
     try:
         with get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -96,9 +47,9 @@ def describe_table(payload: TableRequest) -> dict[str, Any]:
                     WHERE table_schema = 'public' AND table_name = %s
                     ORDER BY ordinal_position
                     """,
-                    (payload.table_name,),
+                    (table_name,),
                 )
-                columns = [dict(r) for r in cur.fetchall()]
+                columns = [dict(row) for row in cur.fetchall()]
 
                 cur.execute(
                     """
@@ -118,36 +69,39 @@ def describe_table(payload: TableRequest) -> dict[str, Any]:
                       AND tc.table_name = %s
                     ORDER BY kcu.column_name
                     """,
-                    (payload.table_name,),
+                    (table_name,),
                 )
-                foreign_keys = [dict(r) for r in cur.fetchall()]
+                foreign_keys = [dict(row) for row in cur.fetchall()]
 
         return {
             "ok": True,
-            "table_name": payload.table_name,
+            "table_name": table_name,
             "columns": columns,
             "foreign_keys": foreign_keys,
         }
     except psycopg2.Error as exc:
+        logger.exception("describe_table failed")
         return {"ok": False, "error": str(exc), "code": exc.pgcode}
 
 
-@app.post("/tools/execute_readonly_query")
-def execute_readonly_query(payload: QueryRequest) -> dict[str, Any]:
-    validation_error = validate_read_only_query(payload.query)
-    if validation_error:
-        return {"ok": False, "error": validation_error, "code": None}
-
-    query = payload.query.strip().rstrip(";")
-
+@mcp.tool()
+def execute_readonly_query(query: str) -> dict[str, Any]:
+    """Execute SQL query. Validation is delegated upstream."""
+    sql = query.strip()
     try:
         with get_connection() as conn:
             conn.autocommit = False
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SET TRANSACTION READ ONLY")
-                cur.execute(query)
-                rows = [dict(r) for r in cur.fetchall()] if cur.description else []
+                cur.execute(sql)
+                rows = [dict(row) for row in cur.fetchall()] if cur.description else []
                 conn.rollback()
+
         return {"ok": True, "rows": rows, "row_count": len(rows)}
     except psycopg2.Error as exc:
+        logger.exception("execute_readonly_query failed")
         return {"ok": False, "error": str(exc), "code": exc.pgcode}
+
+
+if __name__ == "__main__":
+    logger.info("Starting Postgres-Assistant MCP server")
+    mcp.run()
