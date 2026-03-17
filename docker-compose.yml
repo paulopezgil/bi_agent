@@ -1,14 +1,14 @@
 services:
   postgres:
     image: postgres:16
-    container_name: ai-analyst-postgres
+    container_name: bi-agent-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -18,37 +18,22 @@ services:
       timeout: 5s
       retries: 5
 
-  mcp:
+  backend:
     build:
-      context: ./backend/mcp
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: ai-analyst-mcp
+    container_name: bi-agent-backend
     restart: unless-stopped
     environment:
       PGHOST: postgres
       PGPORT: 5432
       PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${PGUSER}
-      PGPASSWORD: ${PGPASSWORD}
-    ports:
-      - "8001:8001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  agent:
-    build:
-      context: ./backend/agent
-      dockerfile: Dockerfile
-    container_name: ai-analyst-agent
-    restart: unless-stopped
-    environment:
-      MCP_BASE_URL: http://mcp:8001
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      MCP_BASE_URL: http://localhost:8001
     ports:
       - "8000:8000"
     depends_on:
-      mcp:
-        condition: service_started
       postgres:
         condition: service_healthy
 
@@ -56,14 +41,14 @@ services:
     build:
       context: ./frontend/chatbot
       dockerfile: Dockerfile
-    container_name: ai-analyst-frontend
+    container_name: bi-agent-frontend
     restart: unless-stopped
+    environment:
+      AGENT_BASE_URL: http://backend:8000
     ports:
       - "3000:8501"
-    environment:
-      AGENT_BASE_URL: http://agent:8000
     depends_on:
-      agent:
+      backend:
         condition: service_started
 
 volumes:
