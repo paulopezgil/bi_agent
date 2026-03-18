@@ -11,3 +11,5 @@ class AgentState(TypedDict):
     """LangGraph state holding the conversation and tool traces."""
 
     messages: Annotated[list[AnyMessage], add_messages]
+    is_safe: bool
+    retry_count: int
