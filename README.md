@@ -1,77 +1,107 @@
 # Autonomous BI Analyst
 
-Full-stack prototype of an AI analyst system with:
-- a LangGraph-based backend agent,
-- an MCP-like SQL tools service,
-- PostgreSQL with seeded BI data,
-- a Streamlit chatbot UI.
+Autonomous BI Analyst is a full-stack prototype that combines:
+- a LangGraph orchestration workflow,
+- an MCP-style database tool server,
+- PostgreSQL with seeded analytics data,
+- and a Streamlit chatbot frontend.
 
-## Current Architecture
+## Repository Layout
 
 ```text
 bi-agent/
 ├── docker-compose.yml
-├── .env
 ├── backend/
 │   ├── agent/
+│   │   ├── config/
+│   │   │   ├── prompts.py
+│   │   │   └── state.py
+│   │   ├── nodes/
+│   │   │   ├── guardrail.py
+│   │   │   ├── query_database.py
+│   │   │   ├── retry.py
+│   │   │   ├── security_warning.py
+│   │   │   └── summarize.py
+│   │   ├── routers/
+│   │   │   ├── guardrail.py
+│   │   │   ├── query_database.py
+│   │   │   └── tool_execution.py
+│   │   ├── graph.py
 │   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   └── app/
-│   │       ├── main.py
-│   │       └── graph.py
+│   │   └── requirements.txt
 │   ├── mcp/
+│   │   ├── client.py
+│   │   ├── server.py
 │   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   └── app/
-│   │       └── main.py
-│   └── postgres/
-│       └── init/
-│           ├── 001_schema.sql
-│           ├── 002_seed_data.sql
-│           └── 003_roles.sql
-└── frontend/
-    └── chatbot/
-        ├── Dockerfile
-        ├── requirements.txt
-        └── app.py
+│   │   └── requirements.txt
+│   ├── postgres/
+│   │   └── init/
+│   │       ├── 001_schema.sql
+│   │       ├── 002_seed_data.sql
+│   │       └── 003_roles.sql
+│   ├── core/
+│   │   ├── openai_client.py
+│   │   └── schemas.py
+│   └── utils/
+│       └── parsing.py
+├── frontend/
+│   └── chatbot/
+│       ├── app.py
+│       ├── Dockerfile
+│       └── requirements.txt
+└── tests/
 ```
 
-## Services
+## Docker Services
 
-- `postgres` (`:5432`): database with schema, seed data, and read-only role.
-- `mcp` (`:8001`): SQL tools API.
-- `agent` (`:8000`): LangGraph orchestration API (`/chat`).
-- `frontend` (`:3000`): Streamlit chatbot web app.
+`docker-compose.yml` currently defines four services:
+- `postgres` on `5432`
+- `mcp` as an internal service (exposes `8001` to the compose network)
+- `agent` on `8000`
+- `frontend` on `3000` (Streamlit container listens on `8501`)
 
-## Agent Flow
+## Current Agent Workflow
 
-1. Build SQL from user question.
-2. Execute read-only query through MCP service.
-3. If SQL fails, retry with corrected/fallback SQL (max 3 retries).
-4. Return answer + SQL + retries + rows.
+The LangGraph flow in `backend/agent/graph.py` is:
 
-## MCP Tools Endpoints
+1. `guardrail`
+2. route to `query_database` or `security_warning`
+3. from `query_database`, route to `execute_tools` or finish
+4. from `execute_tools`, route to `retry` or `summarize`
+5. `retry` and `summarize` both return to `query_database`
 
-- `POST /tools/list_tables`
-- `POST /tools/describe_table`
-- `POST /tools/execute_readonly_query`
+### Prompt Configuration
 
-Safety behavior:
-- Rejects write/DDL statements.
-- Rejects multiple statements.
-- Executes under read-only transaction.
-- Returns structured errors with DB code when available.
+Prompt text is centralized in `backend/agent/config/prompts.py`:
+- `QUERY_DATABASE_SYSTEM_PROMPT`
+- `GUARDRAIL_SYSTEM_PROMPT`
 
-## Run Locally
+### Shared Tool Schema
+
+`backend/core/schemas.py` defines `ToolResponse` to standardize tool output:
+- `ok`
+- `data`
+- `error`
+- `code`
+
+## MCP Integration Mode
+
+Current agent MCP integration uses stdio transport via `backend/mcp/client.py`.
+The agent launches the MCP server process and loads tools with `langchain-mcp-adapters`.
+
+## Important Runtime Notes
+
+- The frontend currently posts to `POST /chat` on the agent URL.
+- The agent Docker command currently runs `python -m backend.agent.graph`, which is graph compilation logic and not an HTTP API server.
+- Because of that, the full frontend-to-agent API path is not yet finalized.
+
+This repository is in active refactor, and orchestration structure is ahead of API wiring.
+
+## Run with Docker Compose
 
 ```bash
 docker compose up -d --build
 ```
-
-Open:
-- Frontend: `http://localhost:3000`
-- Agent health: `http://localhost:8000/health`
-- MCP health: `http://localhost:8001/health`
 
 Stop:
 
@@ -79,9 +109,11 @@ Stop:
 docker compose down
 ```
 
-## Next Steps
+## Next Recommended Steps
 
-1. Replace rule-based SQL generation with an LLM planner/generator.
-2. Swap MCP HTTP shim for official MCP transport wiring end-to-end.
-3. Add integration tests for agent<->mcp<->postgres flow.
-4. Add auth, CORS restrictions, and production-grade observability.
+1. Add a dedicated agent API entrypoint (FastAPI) that invokes the compiled graph and returns `answer/sql/retries/rows/error`.
+2. Decide one MCP deployment mode and align compose plus client:
+   - keep stdio subprocess mode, or
+   - switch to internal network service mode (`agent -> mcp:8001`).
+3. Add integration tests for end-to-end flow (`frontend -> agent -> mcp -> postgres`).
+4. Update health endpoints and README examples once API wiring is complete.

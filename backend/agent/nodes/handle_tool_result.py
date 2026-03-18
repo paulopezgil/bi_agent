@@ -5,7 +5,7 @@ from typing import Any
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
-from backend.agent.state import AgentState
+from backend.agent.config.state import AgentState
 from backend.core.logger import get_logger
 
 logger = get_logger(__name__)

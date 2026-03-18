@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 import psycopg2
 from mcp.server.fastmcp import FastMCP
 from psycopg2.extras import RealDictCursor
 
 from backend.core.logger import get_logger
+from backend.core.schemas import ToolResponse
 from backend.postgres.connection import get_connection
 
 logger = get_logger(__name__)
@@ -14,7 +13,7 @@ mcp = FastMCP("Postgres-Assistant")
 
 
 @mcp.tool()
-def list_tables() -> dict[str, Any]:
+def list_tables() -> ToolResponse:
     """Return all tables in the public schema."""
     try:
         with get_connection() as conn:
@@ -28,14 +27,17 @@ def list_tables() -> dict[str, Any]:
                     """
                 )
                 tables = [row[0] for row in cur.fetchall()]
-        return {"ok": True, "tables": tables}
+        return ToolResponse(ok=True, data={"tables": tables})
     except psycopg2.Error as exc:
         logger.exception("list_tables failed")
-        return {"ok": False, "error": str(exc), "code": exc.pgcode}
+        return ToolResponse(ok=False, error=str(exc), code=exc.pgcode)
+    except Exception as exc:  # pragma: no cover - defensive normalization
+        logger.exception("list_tables failed with unexpected error")
+        return ToolResponse(ok=False, error=str(exc))
 
 
 @mcp.tool()
-def describe_table(table_name: str) -> dict[str, Any]:
+def describe_table(table_name: str) -> ToolResponse:
     """Describe a table's columns and foreign keys."""
     try:
         with get_connection() as conn:
@@ -73,19 +75,24 @@ def describe_table(table_name: str) -> dict[str, Any]:
                 )
                 foreign_keys = [dict(row) for row in cur.fetchall()]
 
-        return {
-            "ok": True,
-            "table_name": table_name,
-            "columns": columns,
-            "foreign_keys": foreign_keys,
-        }
+        return ToolResponse(
+            ok=True,
+            data={
+                "table_name": table_name,
+                "columns": columns,
+                "foreign_keys": foreign_keys,
+            },
+        )
     except psycopg2.Error as exc:
         logger.exception("describe_table failed")
-        return {"ok": False, "error": str(exc), "code": exc.pgcode}
+        return ToolResponse(ok=False, error=str(exc), code=exc.pgcode)
+    except Exception as exc:  # pragma: no cover - defensive normalization
+        logger.exception("describe_table failed with unexpected error")
+        return ToolResponse(ok=False, error=str(exc))
 
 
 @mcp.tool()
-def execute_readonly_query(query: str) -> dict[str, Any]:
+def execute_readonly_query(query: str) -> ToolResponse:
     """Execute SQL query. Validation is delegated upstream."""
     sql = query.strip()
     try:
@@ -96,10 +103,13 @@ def execute_readonly_query(query: str) -> dict[str, Any]:
                 rows = [dict(row) for row in cur.fetchall()] if cur.description else []
                 conn.rollback()
 
-        return {"ok": True, "rows": rows, "row_count": len(rows)}
+        return ToolResponse(ok=True, data={"rows": rows, "row_count": len(rows)})
     except psycopg2.Error as exc:
         logger.exception("execute_readonly_query failed")
-        return {"ok": False, "error": str(exc), "code": exc.pgcode}
+        return ToolResponse(ok=False, error=str(exc), code=exc.pgcode)
+    except Exception as exc:  # pragma: no cover - defensive normalization
+        logger.exception("execute_readonly_query failed with unexpected error")
+        return ToolResponse(ok=False, error=str(exc))
 
 
 if __name__ == "__main__":
