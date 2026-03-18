@@ -1,7 +1,8 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-httpx==0.27.2
-langgraph==0.2.16
-langchain-openai>=0.2.0
-mcp==1.0.0
-langchain-mcp-adapters==0.0.6
+fastapi
+uvicorn[standard]
+langgraph
+langchain-openai
+langchain-core
+langchain-mcp-adapters
+mcp
+psycopg2-binary

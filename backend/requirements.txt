@@ -1,0 +1,6 @@
+mcp
+psycopg2-binary
+langchain-openai
+langgraph
+langchain-core
+uvicorn

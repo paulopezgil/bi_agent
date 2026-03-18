@@ -18,11 +18,29 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  mcp:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    container_name: bi-agent-backend
+      dockerfile: mcp/Dockerfile
+    container_name: bi-agent-mcp
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    expose:
+      - "8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  agent:
+    build:
+      context: ./backend
+      dockerfile: agent/Dockerfile
+    container_name: bi-agent-agent
     restart: unless-stopped
     environment:
       PGHOST: postgres
@@ -37,6 +55,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mcp:
+        condition: service_started
 
   frontend:
     build:
@@ -45,11 +65,11 @@ services:
     container_name: bi-agent-frontend
     restart: unless-stopped
     environment:
-      AGENT_BASE_URL: http://backend:8000
+      AGENT_BASE_URL: http://agent:8000
     ports:
       - "3000:8501"
     depends_on:
-      backend:
+      agent:
         condition: service_started
 
 volumes:
