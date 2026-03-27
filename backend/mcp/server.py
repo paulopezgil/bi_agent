@@ -9,7 +9,11 @@ from backend.mcp.tools.execute_readonly_query import run_execute_readonly_query
 from backend.mcp.tools.list_tables import run_list_tables
 
 logger = get_logger(__name__)
-mcp = FastMCP("Postgres-Assistant")
+mcp = FastMCP(
+    name="Postgres-Assistant",
+    host="0.0.0.0",
+    port=8001,
+)
 
 
 @mcp.tool()
@@ -32,4 +36,4 @@ def execute_readonly_query(query: str) -> ToolResponse:
 
 if __name__ == "__main__":
     logger.info("Starting Postgres-Assistant MCP server on 0.0.0.0:8001")
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8001)
+    mcp.run(transport="streamable-http")

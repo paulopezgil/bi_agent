@@ -17,7 +17,7 @@ _TOOLS_STACK: AsyncExitStack | None = None
 
 
 def get_mcp_url() -> str:
-    return os.getenv("MCP_BASE_URL", "http://mcp:8001")
+    return os.getenv("MCP_BASE_URL", "http://mcp:8001/mcp")
 
 
 async def get_db_tools() -> list[Any]:
