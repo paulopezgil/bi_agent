@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 def _extract_response(state: dict) -> ChatResponse:
     """Pull answer, sql, retries, and rows out of a completed AgentState."""
     messages = state.get("messages", [])
-    retry_count: int = state.get("retry_count", 0)
+    retry_count = state.get("retry_count", 0)
 
     # Answer: content of the last AIMessage without tool calls
     answer = ""
@@ -38,7 +38,7 @@ def _extract_response(state: dict) -> ChatResponse:
             break
 
     # Rows: data from the last successful ToolMessage
-    rows: list = []
+    rows = []
     for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             response = parse_tool_message(msg)

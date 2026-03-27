@@ -23,7 +23,7 @@ def _message_content_to_text(content: str | list) -> str:
         return content
 
     if isinstance(content, list):
-        parts: list[str] = []
+        parts = []
         for item in content:
             if isinstance(item, dict):
                 text = item.get("text")

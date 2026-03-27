@@ -49,7 +49,7 @@ async def handle_tool_result(state: AgentState) -> AgentState:
     retry_count = state.get("retry_count", 0)
     messages = state.get("messages", [])
 
-    last_tool: ToolMessage | None = None
+    last_tool = None
     for message in reversed(messages):
         if isinstance(message, ToolMessage):
             last_tool = message

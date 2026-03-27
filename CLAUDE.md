@@ -13,6 +13,7 @@
 - Never use `Any`. Use specific types or union types instead.
 - Do not use parameterized forms like `dict[str, object]` or `list[object]`. Use plain `dict` or `list` for unknown/mixed value types.
 - Do not import `Dict`, `List`, `Optional`, or `Any` from `typing`.
+- Do not annotate variable assignments. Write `x = []` not `x: list = []`, and `x = None` not `x: Foo | None = None`. Exception: Pydantic model fields always keep their annotations.
 
 ## Architecture & Design Consulting
 

@@ -11,8 +11,8 @@ from backend.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_TOOLS_CACHE: list | None = None
-_TOOLS_STACK: AsyncExitStack | None = None
+_TOOLS_CACHE = None
+_TOOLS_STACK = None
 
 
 def get_mcp_url() -> str:
