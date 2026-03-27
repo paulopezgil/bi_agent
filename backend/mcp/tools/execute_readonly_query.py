@@ -3,7 +3,7 @@ from __future__ import annotations
 from psycopg2.extras import RealDictCursor
 
 from backend.core.schemas import ToolResponse
-from backend.mcp.core.exception_handling import handle_tool_exception
+from backend.mcp.utils import handle_tool_exception
 from backend.postgres.connection import get_connection
 
 

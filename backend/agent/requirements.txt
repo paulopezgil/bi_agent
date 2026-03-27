@@ -5,5 +5,4 @@ langchain-openai
 langchain-core
 langchain-mcp-adapters
 mcp
-psycopg2-binary
 pydantic

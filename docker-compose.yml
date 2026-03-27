@@ -32,6 +32,11 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     expose:
       - "8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8001), timeout=2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,20 +48,14 @@ services:
     container_name: bi-agent-agent
     restart: unless-stopped
     environment:
-      PGHOST: postgres
-      PGPORT: 5432
-      PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      MCP_BASE_URL: http://mcp:8001
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
       mcp:
-        condition: service_started
+        condition: service_healthy
 
   frontend:
     build:

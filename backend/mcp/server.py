@@ -31,5 +31,5 @@ def execute_readonly_query(query: str) -> ToolResponse:
 
 
 if __name__ == "__main__":
-    logger.info("Starting Postgres-Assistant MCP server")
-    mcp.run(transport="stdio")
+    logger.info("Starting Postgres-Assistant MCP server on 0.0.0.0:8001")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8001)

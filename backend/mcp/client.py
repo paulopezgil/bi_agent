@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import os
 from contextlib import AsyncExitStack
 from typing import Any
+
 from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession
-from mcp.client.stdio import StdioServerParameters
-from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 
 from backend.core.logger import get_logger
 
@@ -15,11 +16,8 @@ _TOOLS_CACHE: list[Any] | None = None
 _TOOLS_STACK: AsyncExitStack | None = None
 
 
-def get_postgres_server_parameters() -> StdioServerParameters:
-    """Return stdio server parameters for the Postgres MCP server."""
-    server_path = "/app/backend/mcp/server.py"
-    logger.info("Using MCP server path: %s", server_path)
-    return StdioServerParameters(command="python", args=[server_path])
+def get_mcp_url() -> str:
+    return os.getenv("MCP_BASE_URL", "http://mcp:8001")
 
 
 async def get_db_tools() -> list[Any]:
@@ -30,8 +28,11 @@ async def get_db_tools() -> list[Any]:
     if _TOOLS_CACHE is not None:
         return _TOOLS_CACHE
 
+    url = get_mcp_url()
+    logger.info("Connecting to MCP server at %s", url)
+
     stack = AsyncExitStack()
-    read, write = await stack.enter_async_context(stdio_client(get_postgres_server_parameters()))
+    read, write, _ = await stack.enter_async_context(streamablehttp_client(url))
     session = await stack.enter_async_context(ClientSession(read, write))
 
     await session.initialize()
