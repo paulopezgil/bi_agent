@@ -5,7 +5,7 @@ import os
 import httpx
 import streamlit as st
 
-AGENT_BASE_URL = os.getenv("AGENT_BASE_URL", "http://backend:8000")
+AGENT_BASE_URL = os.getenv("AGENT_BASE_URL", "http://agent:8000")
 
 st.set_page_config(page_title="AI Analyst Chatbot", page_icon="chart_with_upwards_trend", layout="wide")
 
