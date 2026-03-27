@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -31,8 +30,8 @@ class LangChainOpenAIEngine(LLMEngine):
         self,
         output_schema: type[BaseModel],
         prompt_template: str,
-        inputs: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        inputs: dict,
+    ) -> dict:
         """Render *prompt_template*, call ChatOpenAI with structured output, dump to dict.
 
         The chain is: ``ChatPromptTemplate`` → ``ChatOpenAI`` bound to

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 
 import httpx
 import streamlit as st
@@ -42,7 +41,7 @@ if submitted and user_message.strip():
                 timeout=30,
             )
             response.raise_for_status()
-            payload: dict[str, Any] = response.json()
+            payload: dict = response.json()
             st.session_state.history.append(
                 {
                     "question": user_message.strip(),

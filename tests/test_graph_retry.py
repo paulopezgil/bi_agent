@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from backend.agent.graph import run_once_sync
 
 
@@ -12,10 +10,10 @@ class FakeClient:
     async def list_tables(self) -> list[str]:
         return ["customers"]
 
-    async def describe_table(self, table_name: str) -> dict[str, Any]:
+    async def describe_table(self, table_name: str) -> dict:
         return {"table_name": table_name, "columns": [], "foreign_keys": []}
 
-    async def execute_readonly_query(self, query: str) -> dict[str, Any]:
+    async def execute_readonly_query(self, query: str) -> dict:
         self.calls += 1
         if self.calls == 1:
             return {"ok": False, "error": "relation does not exist", "code": "42P01"}

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from langchain_core.messages import SystemMessage, ToolMessage
 
@@ -11,7 +10,7 @@ from backend.core.logger import get_logger
 logger = get_logger(__name__)
 
 
-def _normalize_tool_payload(content: Any) -> dict[str, Any]:
+def _normalize_tool_payload(content: str | dict) -> dict:
     if isinstance(content, dict):
         return content
 
@@ -26,7 +25,7 @@ def _normalize_tool_payload(content: Any) -> dict[str, Any]:
     return {"raw": str(content)}
 
 
-def _is_postgres_error(payload: dict[str, Any]) -> bool:
+def _is_postgres_error(payload: dict) -> bool:
     raw = str(payload.get("raw", "")).lower()
     err = str(payload.get("error", "")).lower()
     code = payload.get("code")

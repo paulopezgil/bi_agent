@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from langchain_core.messages import AIMessage, ToolMessage
@@ -14,7 +13,7 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
-def _extract_response(state: dict[str, Any]) -> ChatResponse:
+def _extract_response(state: dict) -> ChatResponse:
     """Pull answer, sql, retries, and rows out of a completed AgentState."""
     messages = state.get("messages", [])
     retry_count: int = state.get("retry_count", 0)
@@ -39,7 +38,7 @@ def _extract_response(state: dict[str, Any]) -> ChatResponse:
             break
 
     # Rows: data from the last successful ToolMessage
-    rows: list[dict[str, Any]] = []
+    rows: list = []
     for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             response = parse_tool_message(msg)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -19,7 +18,7 @@ class GuardrailDecision(BaseModel):
     reason: str = Field(description="Short explanation of the safety decision")
 
 
-def _message_content_to_text(content: Any) -> str:
+def _message_content_to_text(content: str | list) -> str:
     if isinstance(content, str):
         return content
 

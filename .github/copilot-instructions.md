@@ -43,6 +43,12 @@ You are an expert AI Engineer. Build and evolve the Autonomous BI Analyst in its
 - Surface generated SQL and retry count for transparency.
 - Ensure responsive behavior on mobile and desktop.
 
+## Python Typing Conventions
+- Use built-in types for annotations: `dict`, `list`, `tuple`, `set` — never `Dict`, `List`, `Tuple`, `Set` from `typing`.
+- Use `X | None` instead of `Optional[X]`.
+- Never use `Any` or parameterized forms like `dict[str, object]` or `list[object]`. Use plain `dict` or `list` for unknown/mixed value types.
+- Do not import `Dict`, `List`, `Optional`, or `Any` from `typing`.
+
 ## Phase 5: Engineering Quality
 - Add lint/type/test commands and CI workflow.
 - Add integration tests for `agent <-> mcp <-> postgres`.

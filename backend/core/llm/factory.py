@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Dict
-
 from backend.core.llm.base import LLMEngine
 from backend.core.llm.engines.langchain_openai import LangChainOpenAIEngine
 
 # Registry maps config strings to engine classes.
 # Adding a new engine: import its class and add one line here.
-_REGISTRY: Dict[str, type[LLMEngine]] = {  # type: ignore[type-arg]
+_REGISTRY: dict[str, type[LLMEngine]] = {
     "langchain-openai": LangChainOpenAIEngine,
 }
 
@@ -27,7 +25,7 @@ class EngineFactory:
     """
 
     @staticmethod
-    def create(engine_type: str, **kwargs: Any) -> LLMEngine:  # type: ignore[type-arg]
+    def create(engine_type: str, **kwargs: object) -> LLMEngine:
         """Return a configured ``LLMEngine`` instance.
 
         Args:

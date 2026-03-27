@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from langchain_core.messages import ToolMessage
 from pydantic import ValidationError
@@ -11,7 +10,7 @@ from backend.core.schemas import ToolResponse
 
 def parse_tool_message(message: ToolMessage) -> ToolResponse:
     content = message.content
-    payload: dict[str, Any]
+    payload: dict
 
     if isinstance(content, dict):
         payload = content

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+
 from pydantic import BaseModel
 
 class LLMEngine(ABC):
@@ -19,8 +19,8 @@ class LLMEngine(ABC):
         self,
         output_schema: BaseModel,
         prompt_template: str,
-        inputs: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        inputs: dict,
+    ) -> dict:
         """Render *prompt_template* with *inputs*, invoke the LLM, and return a dict.
 
         Args:

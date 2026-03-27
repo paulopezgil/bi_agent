@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel
 
 
@@ -13,5 +11,5 @@ class ChatResponse(BaseModel):
     answer: str
     sql: str
     retries: int
-    rows: list[dict[str, Any]]
+    rows: list
     error: str
