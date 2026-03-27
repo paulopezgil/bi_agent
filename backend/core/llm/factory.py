@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from backend.core.llm.base import LLMEngine
+from backend.core.llm.engines.langchain_anthropic import LangChainAnthropicEngine
 from backend.core.llm.engines.langchain_openai import LangChainOpenAIEngine
 
 # Registry maps config strings to engine classes.
 # Adding a new engine: import its class and add one line here.
-_REGISTRY: dict[str, type[LLMEngine]] = {
+_REGISTRY = {
+    "langchain-anthropic": LangChainAnthropicEngine,
     "langchain-openai": LangChainOpenAIEngine,
 }
 
