@@ -32,7 +32,7 @@ class LangChainAzureOpenAIEngine(LLMEngine):
         """
         self._azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT")
         self._azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
-        self._api_version = api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+        self._api_version = api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
         self._temperature = temperature
 
     async def generate(
