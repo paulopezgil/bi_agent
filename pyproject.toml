@@ -9,9 +9,14 @@ description = "Autonomous BI Analyst built with LangGraph and MCP"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "fastapi>=0.111.0",
+  "uvicorn[standard]>=0.29.0",
   "langgraph>=0.2.0",
-  "mcp>=1.0.0",
+  "langchain-core>=0.2.0",
   "langchain-openai>=0.2.0",
+  "langchain-anthropic>=0.2.0",
+  "langchain-mcp-adapters>=0.0.1",
+  "mcp>=1.0.0",
   "pydantic>=2.8.0",
   "psycopg2-binary>=2.9.9"
 ]
@@ -19,13 +24,15 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.0",
+  "python-dotenv>=1.0.0",
   "ruff>=0.6.0",
   "mypy>=1.10.0"
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["backend*"]
 
 [tool.ruff]
 line-length = 100
@@ -33,6 +40,10 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+  "integration: marks tests that call external APIs (deselect with -m 'not integration')",
+]
 
 [tool.mypy]
 python_version = "3.11"

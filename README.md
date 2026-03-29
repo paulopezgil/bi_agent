@@ -42,8 +42,9 @@ bi-agent/
 │   │   │   ├── base.py               # LLMEngine abstract base class
 │   │   │   ├── factory.py            # EngineFactory registry
 │   │   │   └── engines/
-│   │   │       ├── langchain_anthropic.py   # Claude via LangChain
-│   │   │       └── langchain_openai.py      # GPT via LangChain
+│   │   │       ├── langchain_anthropic.py      # Claude via LangChain
+│   │   │       ├── langchain_azure_openai.py  # Azure OpenAI via LangChain
+│   │   │       └── langchain_openai.py         # GPT via LangChain
 │   │   ├── logger.py
 │   │   ├── openai_client.py
 │   │   └── schemas.py                # Shared ToolResponse schema
@@ -70,8 +71,16 @@ bi-agent/
 │       ├── Dockerfile
 │       └── requirements.txt
 └── tests/
-    ├── test_graph_retry.py
-    └── test_mcp_server.py
+    ├── integration/
+    │   └── llm/
+    │       ├── test_anthropic_engine.py    # Live API tests for Anthropic engine
+    │       ├── test_azure_openai_engine.py # Live API tests for Azure OpenAI engine
+    │       └── test_openai_engine.py       # Live API tests for OpenAI engine
+    └── unit/
+        ├── agent/
+        │   └── test_graph_retry.py
+        └── mcp/
+            └── test_mcp_server.py
 ```
 
 ---
@@ -134,20 +143,63 @@ result = await engine.generate(MySchema, "Analyse: {text}", {"text": "..."})
 
 ### Supported engines
 
-| Key                  | Class                      | Default model       |
-|----------------------|----------------------------|---------------------|
-| `langchain-openai`   | `LangChainOpenAIEngine`    | `OPENAI_MODEL` / `gpt-4o`          |
-| `langchain-anthropic`| `LangChainAnthropicEngine` | `ANTHROPIC_MODEL` / `claude-sonnet-4-6` |
+| Key                      | Class                          | Default model / deployment         |
+|--------------------------|--------------------------------|------------------------------------|
+| `langchain-openai`       | `LangChainOpenAIEngine`        | `OPENAI_MODEL` / `gpt-4o`          |
+| `langchain-anthropic`    | `LangChainAnthropicEngine`     | `ANTHROPIC_MODEL` / `claude-sonnet-4-6` |
+| `langchain-azure-openai` | `LangChainAzureOpenAIEngine`   | `AZURE_OPENAI_DEPLOYMENT`          |
 
 ### Environment variables
 
 ```env
 OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-4o
+OPENAI_MODEL=gpt-4o                  # optional
 
 ANTHROPIC_API_KEY=...
-ANTHROPIC_MODEL=claude-sonnet-4-6   # optional, falls back to claude-sonnet-4-6
+ANTHROPIC_MODEL=claude-sonnet-4-6    # optional
+
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_API_VERSION=2024-08-01-preview   # optional
 ```
+
+---
+
+## Local Development & Testing
+
+### Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+```
+
+This installs the full runtime and all dev dependencies (`pytest`, `pytest-asyncio`, `python-dotenv`) in one step.
+
+### Environment variables
+
+Copy `.env.example` to `.env` and fill in your API keys (the file is gitignored):
+
+```bash
+cp .env.example .env
+```
+
+### Running the tests
+
+```bash
+# All tests
+pytest
+
+# Integration tests only (make real API calls — requires valid keys in .env)
+pytest -m integration
+
+# Skip integration tests
+pytest -m "not integration"
+```
+
+Integration tests are in `tests/integration/llm/` — one file per engine — and verify that each one (`langchain-openai`, `langchain-anthropic`, `langchain-azure-openai`) can produce structured output from a live API call. Each engine has an easy test (maths question with a definitive answer) and a difficult test (open-ended question that validates structure only).
 
 ---
 
