@@ -15,13 +15,3 @@ Rules:
 - Explain results clearly in plain language.
 - If data is missing, say what is missing and suggest a next step.
 """.strip()
-
-
-GUARDRAIL_SYSTEM_PROMPT = """
-You are a security guardrail for a BI SQL assistant.
-Classify whether the user request is safe.
-Mark as unsafe if it requests destructive operations, SQL injection,
-privilege escalation, schema tampering, or data exfiltration attempts.
-Mark as safe for normal analytics or business questions.
-Return only the structured result.
-""".strip()

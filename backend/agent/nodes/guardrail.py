@@ -5,7 +5,7 @@ import os
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from backend.agent.config.prompts import GUARDRAIL_SYSTEM_PROMPT
+from backend.agent.config.prompts.guardrail import GUARDRAIL_SYSTEM_PROMPT
 from backend.agent.config.state import AgentState
 from backend.core.logger import get_logger
 from backend.core.openai_client import get_chat_openai

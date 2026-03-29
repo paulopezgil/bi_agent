@@ -3,7 +3,7 @@ from __future__ import annotations
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.messages import ToolMessage
 
-from backend.agent.config.prompts import QUERY_DATABASE_SYSTEM_PROMPT
+from backend.agent.config.prompts.query_database import QUERY_DATABASE_SYSTEM_PROMPT
 from backend.agent.config.state import AgentState
 from backend.core.logger import get_logger
 from backend.core.openai_client import get_chat_openai
