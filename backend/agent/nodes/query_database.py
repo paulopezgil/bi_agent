@@ -5,8 +5,8 @@ from langchain_core.messages import ToolMessage
 
 from backend.agent.config.prompts.query_database import QUERY_DATABASE_SYSTEM_PROMPT
 from backend.agent.config.state import AgentState
+from backend.core.llm.factory import EngineFactory
 from backend.core.logger import get_logger
-from backend.core.openai_client import get_chat_openai
 from backend.mcp.client import get_db_tools
 from backend.utils.parsing import parse_tool_message
 
@@ -42,11 +42,10 @@ async def query_database(state: AgentState) -> AgentState:
         }
 
     tools = await get_db_tools()
-    llm = get_chat_openai(temperature=0)
-    model_with_tools = llm.bind_tools(tools)
-
-    response = await model_with_tools.ainvoke(
-        [SystemMessage(content=QUERY_DATABASE_SYSTEM_PROMPT), *state["messages"]]
+    engine = EngineFactory.create_default()
+    response = await engine.generate_with_tools(
+        tools,
+        [SystemMessage(content=QUERY_DATABASE_SYSTEM_PROMPT), *state["messages"]],
     )
 
     if isinstance(response, AIMessage) and response.tool_calls:

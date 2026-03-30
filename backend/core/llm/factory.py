@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from backend.core.llm.base import LLMEngine
 from backend.core.llm.engines.langchain_anthropic import LangChainAnthropicEngine
 from backend.core.llm.engines.langchain_azure_openai import LangChainAzureOpenAIEngine
@@ -17,30 +19,23 @@ _REGISTRY = {
 class EngineFactory:
     """Instantiates ``LLMEngine`` implementations from a configuration string.
 
-    Separation of Concerns: the factory is the *only* place that knows which
-    concrete engines exist.  Callers (nodes, services) receive an ``LLMEngine``
-    and never need to import a concrete class themselves, keeping the graph
-    nodes free of provider-specific imports.
+    The active engine is selected via the ``LLM_ENGINE`` environment variable.
+    Supported values: ``"langchain-openai"``, ``"langchain-azure-openai"``,
+    ``"langchain-anthropic"``.
 
     Example::
 
-        engine = EngineFactory.create("langchain-openai", model="gpt-4o-mini")
-        result = await engine.generate(MySchema, "Summarise: {text}", {"text": "..."})
+        engine = EngineFactory.create_default()
+        decision = await engine.generate_structured(MySchema, messages)
     """
 
     @staticmethod
     def create(engine_type: str, **kwargs: object) -> LLMEngine:
-        """Return a configured ``LLMEngine`` instance.
+        """Return a configured ``LLMEngine`` instance for *engine_type*.
 
         Args:
             engine_type: A registry key identifying the desired engine.
-                         Currently supported: ``"langchain-openai"``.
-            **kwargs:    Forwarded verbatim to the engine's ``__init__``.
-                         For ``LangChainOpenAIEngine`` these are ``model``
-                         and ``temperature``.
-
-        Returns:
-            A ready-to-use ``LLMEngine`` instance.
+            **kwargs:    Forwarded to the engine's ``__init__``.
 
         Raises:
             ValueError: If *engine_type* is not in the registry.
@@ -52,6 +47,17 @@ class EngineFactory:
                 f"Unknown engine type {engine_type!r}. Supported: {supported}"
             )
         return engine_cls(**kwargs)
+
+    @staticmethod
+    def create_default(**kwargs: object) -> LLMEngine:
+        """Return an engine for the type set in ``LLM_ENGINE`` (default: ``langchain-openai``).
+
+        Args:
+            **kwargs: Forwarded to the engine's ``__init__``. Use ``model``
+                      to override the model/deployment for all engine types.
+        """
+        engine_type = os.getenv("LLM_ENGINE", "langchain-openai")
+        return EngineFactory.create(engine_type, **kwargs)
 
     @staticmethod
     def available() -> list[str]:

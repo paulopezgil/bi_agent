@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
-
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from backend.agent.config.prompts.guardrail import GUARDRAIL_SYSTEM_PROMPT
 from backend.agent.config.state import AgentState
+from backend.core.llm.factory import EngineFactory
 from backend.core.logger import get_logger
-from backend.core.openai_client import get_chat_openai
 
 logger = get_logger(__name__)
 
@@ -53,16 +51,14 @@ async def guardrail(state: AgentState) -> AgentState:
             "retry_count": state.get("retry_count", 0),
         }
 
-    guardrail_model = os.getenv("OPENAI_GUARDRAIL_MODEL", "gpt-4o-mini")
-
     try:
-        llm = get_chat_openai(model=guardrail_model, temperature=0)
-        classifier = llm.with_structured_output(GuardrailDecision)
-        decision = await classifier.ainvoke(
+        engine = EngineFactory.create_default()
+        decision = await engine.generate_structured(
+            GuardrailDecision,
             [
                 SystemMessage(content=GUARDRAIL_SYSTEM_PROMPT),
                 HumanMessage(content=latest_text),
-            ]
+            ],
         )
 
         if not decision.is_safe:
@@ -80,4 +76,3 @@ async def guardrail(state: AgentState) -> AgentState:
             "is_safe": False,
             "retry_count": state.get("retry_count", 0),
         }
-

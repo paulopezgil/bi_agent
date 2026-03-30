@@ -46,7 +46,6 @@ bi-agent/
 │   │   │       ├── langchain_azure_openai.py  # Azure OpenAI via LangChain
 │   │   │       └── langchain_openai.py         # GPT via LangChain
 │   │   ├── logger.py
-│   │   ├── openai_client.py
 │   │   └── schemas.py                # Shared ToolResponse schema
 │   ├── mcp/                          # MCP tool server (streamable HTTP)
 │   │   ├── tools/
@@ -126,42 +125,55 @@ The LangGraph flow in `backend/agent/graph.py`:
 
 ### How it works
 
-`LLMEngine` (in `base.py`) defines a single async method:
+`LLMEngine` (in `base.py`) uses the Template Method pattern. Each engine subclass implements `_build_llm()` to construct its provider-specific `BaseChatModel`; the base class stores it and exposes two concrete async methods covering the two usage patterns in the agent:
 
 ```python
-async def generate(output_schema, prompt_template, inputs) -> dict
+# Structured classification (e.g. guardrail node)
+result = await engine.generate_structured(MySchema, messages)   # returns MySchema instance
+
+# Tool-augmented generation (e.g. query_database node)
+response = await engine.generate_with_tools(tools, messages)    # returns BaseMessage
 ```
 
-Callers pass a Pydantic schema, a prompt template, and input values. They always receive a plain `dict` back — no provider types leak out.
+The active engine is selected at runtime via the `LLM_ENGINE` environment variable — no code changes required when switching providers.
 
-`EngineFactory` (in `factory.py`) maps string keys to concrete engine classes:
+`EngineFactory` (in `factory.py`) maps string keys to engine classes:
 
 ```python
-engine = EngineFactory.create("langchain-anthropic")  # or "langchain-openai"
-result = await engine.generate(MySchema, "Analyse: {text}", {"text": "..."})
+# Explicit engine
+engine = EngineFactory.create("langchain-anthropic", temperature=0)
+
+# Engine from LLM_ENGINE env var (used by all agent nodes)
+engine = EngineFactory.create_default()
 ```
 
 ### Supported engines
 
-| Key                      | Class                          | Default model / deployment         |
-|--------------------------|--------------------------------|------------------------------------|
-| `langchain-openai`       | `LangChainOpenAIEngine`        | `OPENAI_MODEL` / `gpt-4o`          |
-| `langchain-anthropic`    | `LangChainAnthropicEngine`     | `ANTHROPIC_MODEL` / `claude-sonnet-4-6` |
-| `langchain-azure-openai` | `LangChainAzureOpenAIEngine`   | `AZURE_OPENAI_DEPLOYMENT`          |
+| Key                      | Class                          | Default model / deployment              |
+|--------------------------|--------------------------------|-----------------------------------------|
+| `langchain-openai`       | `LangChainOpenAIEngine`        | `OPENAI_MODEL` env var / `gpt-4o`       |
+| `langchain-anthropic`    | `LangChainAnthropicEngine`     | `ANTHROPIC_MODEL` env var / `claude-sonnet-4-6` |
+| `langchain-azure-openai` | `LangChainAzureOpenAIEngine`   | `AZURE_OPENAI_DEPLOYMENT` env var       |
 
 ### Environment variables
 
 ```env
+# Select the active engine (default: langchain-openai)
+LLM_ENGINE=langchain-openai
+
+# OpenAI
 OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-4o                  # optional
+OPENAI_MODEL=gpt-4o                          # optional
 
+# Anthropic
 ANTHROPIC_API_KEY=...
-ANTHROPIC_MODEL=claude-sonnet-4-6    # optional
+ANTHROPIC_MODEL=claude-sonnet-4-6            # optional
 
+# Azure OpenAI
 AZURE_OPENAI_API_KEY=...
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com/
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
-AZURE_OPENAI_API_VERSION=2024-08-01-preview   # optional
+AZURE_OPENAI_DEPLOYMENT=your-deployment-name
+AZURE_OPENAI_API_VERSION=2024-08-01-preview  # optional
 ```
 
 ---
@@ -226,7 +238,7 @@ Nodes and services depend on the `LLMEngine` abstraction, never on `ChatOpenAI` 
 
 ### Interface Segregation
 
-`LLMEngine` exposes exactly one method (`generate`). Engines are not forced to implement streaming, fine-tuning configuration, or token counting — concerns that belong to other abstractions. Each layer only knows what it needs.
+`LLMEngine` exposes exactly two methods — `generate_structured` and `generate_with_tools` — covering the two distinct patterns the agent needs. Engines are not forced to implement streaming, fine-tuning configuration, or token counting — concerns that belong to other abstractions. Each layer only knows what it needs.
 
 ### Separation of Concerns across layers
 
