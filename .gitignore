@@ -26,7 +26,7 @@ htmlcov/
 .ipynb_checkpoints/
 
 # IDE/editor
-.github/*
+.github/
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
