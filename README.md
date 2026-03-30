@@ -204,6 +204,9 @@ cp .env.example .env
 # All tests
 pytest
 
+# Unit tests only
+pytest tests/unit/
+
 # Integration tests only (make real API calls — requires valid keys in .env)
 pytest -m integration
 
@@ -211,7 +214,38 @@ pytest -m integration
 pytest -m "not integration"
 ```
 
-Integration tests are in `tests/integration/llm/` — one file per engine — and verify that each one (`langchain-openai`, `langchain-anthropic`, `langchain-azure-openai`) can produce structured output from a live API call. Each engine has an easy test (maths question with a definitive answer) and a difficult test (open-ended question that validates structure only).
+### Test structure
+
+```text
+tests/
+├── unit/
+│   ├── agent/
+│   │   ├── graph/                        # Full graph wiring and routing
+│   │   │   ├── test_happy_path.py        # Tool succeeds on first attempt
+│   │   │   ├── test_retry.py             # Tool fails then recovers
+│   │   │   └── test_security.py          # Guardrail blocks unsafe request
+│   │   └── nodes/                        # Individual node input/output
+│   │       ├── test_guardrail.py
+│   │       ├── test_handle_tool_result.py
+│   │       ├── test_query_database.py
+│   │       ├── test_retry.py
+│   │       ├── test_security_warning.py
+│   │       └── test_summarize.py
+│   └── mcp/
+│       └── test_mcp_server.py
+└── integration/
+    └── llm/                              # Live API calls — requires valid keys
+        ├── test_openai_engine.py
+        ├── test_anthropic_engine.py
+        └── test_azure_openai_engine.py
+```
+
+**Unit tests** run fully offline with mocked LLM calls and mocked MCP tools. They are split into two levels:
+
+- **Node tests** (`tests/unit/agent/nodes/`) — call each node function directly and assert on the partial state dict it returns. Fast and focused on a single node's logic.
+- **Graph tests** (`tests/unit/agent/graph/`) — compile and run the full LangGraph workflow. Verify that nodes are wired correctly, state is merged by the reducers, and conditional edges route as expected.
+
+**Integration tests** (`tests/integration/llm/`) make real API calls to verify that each engine (`langchain-openai`, `langchain-anthropic`, `langchain-azure-openai`) can produce structured output. Each engine has an easy test (maths question with a definitive answer) and a difficult test (open-ended question that validates structure only).
 
 ---
 
