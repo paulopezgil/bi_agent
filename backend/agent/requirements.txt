@@ -1,8 +1,9 @@
 fastapi
 uvicorn[standard]
 langgraph
-langchain-openai
 langchain-core
+langchain-openai
+langchain-anthropic
 langchain-mcp-adapters
 mcp
 pydantic
