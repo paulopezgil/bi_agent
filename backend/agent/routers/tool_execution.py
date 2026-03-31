@@ -4,7 +4,7 @@ from typing import Literal
 
 from langchain_core.messages import ToolMessage
 
-from backend.agent.config.state import AgentState
+from backend.agent.graph.state import AgentState
 from backend.core.logger import get_logger
 from backend.utils.parsing import parse_tool_message
 

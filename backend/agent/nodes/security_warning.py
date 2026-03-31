@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from langchain_core.messages import AIMessage
 
-from backend.agent.config.state import AgentState
+from backend.agent.graph.state import AgentState
 from backend.core.logger import get_logger
 
 logger = get_logger(__name__)

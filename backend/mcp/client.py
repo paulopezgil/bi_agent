@@ -5,7 +5,7 @@ from contextlib import AsyncExitStack
 
 from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 
 from backend.core.logger import get_logger
 
@@ -31,7 +31,7 @@ async def get_db_tools() -> list:
     logger.info("Connecting to MCP server at %s", url)
 
     stack = AsyncExitStack()
-    read, write, _ = await stack.enter_async_context(streamablehttp_client(url))
+    read, write, _ = await stack.enter_async_context(streamable_http_client(url))
     session = await stack.enter_async_context(ClientSession(read, write))
 
     await session.initialize()

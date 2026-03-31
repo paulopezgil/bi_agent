@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import ToolMessage
 from pydantic import BaseModel, Field
 
 from backend.agent.config.prompts.guardrail import GUARDRAIL_SYSTEM_PROMPT
-from backend.agent.config.state import AgentState
-from backend.core.llm.factory import EngineFactory
+from backend.agent.graph.state import AgentState
 from backend.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -34,45 +34,47 @@ def _message_content_to_text(content: str | list) -> str:
     return str(content)
 
 
-async def guardrail(state: AgentState) -> AgentState:
-    """Use an LLM classifier to determine whether the request is safe."""
-    logger.info("Node transition: guardrail")
+def make_guardrail_node(engine):
+    async def guardrail(state: AgentState) -> AgentState:
+        """Use an LLM classifier to determine whether the request is safe."""
+        logger.info("Node transition: guardrail")
 
-    messages = state.get("messages", [])
-    latest_text = ""
-    if messages:
-        latest = messages[-1]
-        latest_text = _message_content_to_text(getattr(latest, "content", ""))
+        messages = state.get("messages", [])
+        latest_text = ""
+        if messages:
+            latest = messages[-1]
+            latest_text = _message_content_to_text(getattr(latest, "content", ""))
 
-    if not latest_text.strip():
-        logger.warning("Guardrail received empty input, marking unsafe")
-        return {
-            "is_safe": False,
-            "retry_count": state.get("retry_count", 0),
-        }
+        if not latest_text.strip():
+            logger.warning("Guardrail received empty input, marking unsafe")
+            return {
+                "is_safe": False,
+                "retry_count": state.get("retry_count", 0),
+            }
 
-    try:
-        engine = EngineFactory.create_default()
-        decision = await engine.generate_structured(
-            GuardrailDecision,
-            [
-                SystemMessage(content=GUARDRAIL_SYSTEM_PROMPT),
-                HumanMessage(content=latest_text),
-            ],
-        )
+        try:
+            decision = await engine.generate_structured(
+                GuardrailDecision,
+                [
+                    SystemMessage(content=GUARDRAIL_SYSTEM_PROMPT),
+                    HumanMessage(content=latest_text),
+                ],
+            )
 
-        if not decision.is_safe:
-            logger.warning("Guardrail blocked request: %s", decision.reason)
-        else:
-            logger.info("Guardrail allowed request")
+            if not decision.is_safe:
+                logger.warning("Guardrail blocked request: %s", decision.reason)
+            else:
+                logger.info("Guardrail allowed request")
 
-        return {
-            "is_safe": decision.is_safe,
-            "retry_count": state.get("retry_count", 0),
-        }
-    except Exception as exc:  # pragma: no cover - network/provider dependent
-        logger.exception("Guardrail classification failed, marking unsafe: %s", exc)
-        return {
-            "is_safe": False,
-            "retry_count": state.get("retry_count", 0),
-        }
+            return {
+                "is_safe": decision.is_safe,
+                "retry_count": state.get("retry_count", 0),
+            }
+        except Exception as exc:  # pragma: no cover - network/provider dependent
+            logger.exception("Guardrail classification failed, marking unsafe: %s", exc)
+            return {
+                "is_safe": False,
+                "retry_count": state.get("retry_count", 0),
+            }
+
+    return guardrail

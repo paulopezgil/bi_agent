@@ -51,10 +51,8 @@ async def test_graph_succeeds_without_retry() -> None:
     ])
 
     with (
-        patch("backend.agent.graph.get_db_tools", new_callable=AsyncMock, return_value=fake_tools),
-        patch("backend.agent.nodes.query_database.get_db_tools", new_callable=AsyncMock, return_value=fake_tools),
-        patch("backend.agent.nodes.guardrail.EngineFactory.create_default", return_value=engine),
-        patch("backend.agent.nodes.query_database.EngineFactory.create_default", return_value=engine),
+        patch("backend.agent.graph.compile.get_db_tools", new_callable=AsyncMock, return_value=fake_tools),
+        patch("backend.agent.graph.compile.EngineFactory.create_default", return_value=engine),
     ):
         graph = await compile_graph()
         state = await graph.ainvoke({"messages": [HumanMessage(content="How many customers?")]})
