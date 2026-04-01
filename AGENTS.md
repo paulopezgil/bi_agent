@@ -1,186 +1,90 @@
 # AGENTS.md - BI Agent Guide
 
-Instructions for coding agents operating in this repository.
-Apply these defaults unless a user request explicitly overrides them.
+Instructions for coding agents operating in this repository. Apply these defaults unless requested otherwise.
 
 ## Project Context
+- **App**: Autonomous BI Analyst
+- **Stack**: FastAPI, LangGraph, MCP, PostgreSQL, Streamlit
+- **Codebase**: `backend/` (API, graph, tools), `frontend/` (UI), `tests/` (unit and integration)
 
-- App: Autonomous BI Analyst.
-- Stack: FastAPI + LangGraph + MCP + PostgreSQL + Streamlit.
-- Primary Python package: `backend/`.
-- Tests: `tests/unit/` (mocked/offline) and `tests/integration/` (real provider calls).
+## Build, Run, and Lint Commands
 
-## Repo Layout
-
-- `backend/agent/`: API app, graph compile/wiring, nodes, routers, prompts, schemas.
-- `backend/core/`: logging, shared schemas, LLM abstraction, engine factory/providers.
-- `backend/mcp/`: MCP server, tool registration, DB tool implementations.
-- `backend/postgres/init/`: SQL schema and seed scripts.
-- `frontend/chatbot/`: Streamlit chat UI.
-- `tests/unit/`: node-level, graph-level, and MCP unit tests.
-- `tests/integration/llm/`: OpenAI/Anthropic/Azure engine integration checks.
-
-## Local Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env
-```
-
-## Build and Run Commands
-
-### Docker workflow
-
+### Docker (Full Stack)
 ```bash
 docker compose up -d --build
 docker compose down
 ```
 
-### Run services directly
-
+### Local Services
 ```bash
-# FastAPI agent
-uvicorn backend.agent.app:app --reload --host 0.0.0.0 --port 8000
-
-# MCP server
-python -m backend.mcp.server
-
-# Streamlit frontend
-streamlit run frontend/chatbot/app.py --server.port 3000
+uvicorn backend.agent.app:app --reload --host 0.0.0.0 --port 8000  # FastAPI agent
+python -m backend.mcp.server                                       # MCP server
+streamlit run frontend/chatbot/app.py --server.port 3000           # UI
 ```
 
-## Lint, Format, Typecheck
-
+### Linting & Typechecking
 ```bash
-ruff check .
-ruff format .
-mypy backend tests
+ruff check .      # Lint (100 char limit)
+ruff format .     # Format
+mypy backend tests # Typecheck (strict = true)
 ```
 
-Notes:
-- Ruff line length is 100.
-- Mypy is strict (`strict = true`).
+## Testing Commands
 
-## Test Commands
-
+Always run tests to verify changes.
 ```bash
-# All tests
-pytest
-
-# Unit tests only
-pytest tests/unit/
-
-# Integration tests only
-pytest -m integration
-
-# Exclude integration tests
-pytest -m "not integration"
+pytest                                                # All tests
+pytest tests/unit/                                    # Unit tests only
+pytest -m integration                                 # Integration tests only
+pytest -m "not integration"                           # Exclude integration tests
 ```
 
-### Single-test patterns (important)
-
+### Single-Test Execution Patterns (CRITICAL)
+When iterating on a specific feature, run targeted tests:
 ```bash
-# Single file
-pytest tests/unit/agent/nodes/test_query_database.py
-
-# Single test function
-pytest tests/unit/agent/nodes/test_query_database.py::test_returns_engine_response_as_message
-
-# Subset by keyword
-pytest tests/unit/agent/nodes/test_query_database.py -k "retry"
-
-# Stop quickly while iterating
-pytest tests/unit/agent/nodes/test_query_database.py -x
+pytest tests/unit/agent/nodes/test_query_database.py                                  # Entire file
+pytest tests/unit/agent/nodes/test_query_database.py::test_returns_message            # Single function
+pytest tests/unit/agent/nodes/test_query_database.py -k "retry"                       # By keyword
+pytest tests/unit/agent/nodes/test_query_database.py -x                               # Fail fast
 ```
 
-## Environment Variables
+## Code Style & Conventions
 
-- `LLM_ENGINE` (`langchain-openai`, `langchain-anthropic`, `langchain-azure-openai`).
-- OpenAI: `OPENAI_API_KEY`, optional `OPENAI_MODEL`.
-- Anthropic: `ANTHROPIC_API_KEY`, optional `ANTHROPIC_MODEL`.
-- Azure: `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`, optional `AZURE_OPENAI_API_VERSION`.
-- `MCP_BASE_URL` (default `http://mcp:8001/mcp`).
-- `AGENT_BASE_URL` for frontend -> agent calls.
+### Imports & Formatting
+- **Imports**: Prefer absolute (`from backend...`), avoid wildcards (`*`). Group: stdlib, 3rd-party, local.
+- **Formatting**: Ruff, 100-character line length limit. Extract helpers for complex parsing logic.
 
-## Code Style and Conventions
-
-### Imports
-
-- Prefer absolute imports from `backend...`.
-- Order groups as stdlib, third-party, local.
-- Keep imports explicit; avoid wildcard imports.
-
-### Formatting and organization
-
-- Follow Ruff formatting and 100-char lines.
-- Keep functions small and focused.
-- Extract helpers for parsing/normalization.
-- Add comments only for non-obvious behavior.
-
-### Typing (repo-specific rules)
-
-- Use built-in containers: `list`, `dict`, `tuple`, `set`.
-- Use `X | None`, not `Optional[X]`.
-- Do not use `Any`.
-- For mixed/unknown mappings, use plain `dict`/`list`.
-- Do not import `Dict`, `List`, `Optional`, `Any` from `typing`.
-- Avoid variable assignment annotations (except schema/model field needs).
+### Typing (Strict Rules)
+- **Use built-ins**: `list`, `dict`, `tuple`, `set`. (No `typing.List`, `typing.Dict`).
+- **Optionals**: Use `X | None`, NOT `Optional[X]`.
+- **Avoid `Any`**: For unknown structures, use plain `dict` or `list`.
+- **Variables**: Avoid assigning type annotations to variables unless required by Pydantic models.
 
 ### Naming
+- **Files/Variables/Functions**: `snake_case`
+- **Classes/Models**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE`
+- **Node Builders**: `make_*` prefix pattern.
 
-- Modules/files: `snake_case.py`.
-- Functions/variables: `snake_case`.
-- Classes/models: `PascalCase`.
-- Constants and prompt constants: `UPPER_SNAKE_CASE`.
-- Node builders follow existing `make_*` naming pattern.
+### Error Handling
+- **Boundaries**: Validate inputs early (API bounds, tools).
+- **Nodes**: Fail safely, return explicit fallback states in graph nodes.
+- **Logging**: Use contextual messages via `get_logger(__name__)`. Keep stack traces in logs, not UI.
+- **No Swallowing**: Never use empty `except:` or `pass` exceptions silently.
 
-### Error handling
+## Agent Workflow & Design Principles
 
-- Validate early at boundaries.
-- In graph nodes, fail safely and return explicit fallback state when needed.
-- Log with contextual messages via `get_logger(__name__)`.
-- Preserve actionable user errors; keep stack details in logs.
-- Never silently swallow exceptions.
+### Design Principles
+Apply Single Responsibility, Separation of Concerns, Dependency Inversion, Open/Closed, and DRY. Prefer explicit logic over implicit magic. Aim for low coupling and high cohesion.
 
-### Testing guidance
+### Collaboration Pattern
+1. Restate the objective and propose a concise plan.
+2. Implement in small, verifyable steps.
+3. Run relevant lint, type, and test commands immediately after implementation.
+4. Report changes succinctly without over-explaining code unless requested.
 
-- Prefer unit tests for behavior/routing changes.
-- Mock engine/tool boundaries in unit tests.
-- Update graph-level tests for retry/edge changes.
-- Keep integration tests focused on provider compatibility.
-
-## Design Principles for Agent Changes
-
-When designing or refactoring, explicitly apply:
-
-- Single Responsibility.
-- Separation of Concerns.
-- Dependency Inversion.
-- Open/Closed Principle.
-- DRY without premature abstraction.
-- Explicit over implicit.
-- Fail fast.
-- Low coupling and high cohesion.
-
-In architecture discussions, include trade-offs, not just one "correct" answer.
-
-## Collaboration Pattern
-
-For non-trivial tasks:
-
-1. Restate objective and propose a concise plan.
-2. Implement in small, reviewable steps.
-3. Run relevant lint/type/test commands.
-4. Report what changed and why.
-
-## Cursor/Copilot Rule Files
-
-Checked and not found in this repository:
-
+## External Rules (Cursor / Copilot)
+No external rule files were found in this repository. Do not look for or rely on:
 - `.cursor/rules/`
 - `.cursorrules`
 - `.github/copilot-instructions.md`
-
-No additional Cursor or Copilot instruction files are currently present.
